@@ -3,8 +3,10 @@ import random
 
 WIDTH = 800 #1700
 HEIGHT = 600 #950
-PANZER_STEP = 2
-SHOT_STEP = 2 * PANZER_STEP
+
+RECHARGE_ENEMY = 100
+RECHARGE_PLAYER = 20
+
 
 tankBlue = Actor('tank_blue')
 tankBlue.topleft = 0, 10
@@ -13,16 +15,26 @@ grass = []
 walls = []
 bullets = []
 bullet_holdoff = []
-bullet_holdoff.append(100)
-bullet_holdoff.append(100)
+bullet_holdoff.append(RECHARGE_PLAYER)
+bullet_holdoff.append(RECHARGE_PLAYER)
+bullet_holdoff.append(RECHARGE_ENEMY)
 
 tankGreen = Actor('tank_green')
 tankGreen.bottomright = WIDTH, HEIGHT
 
-enemy = Actor('tank_huge')
-enemy.y = 25
-enemy.x = 400
-enemy.move_count = 0
+enemies = []
+for i in range(20):
+    enemy = Actor('tank_huge')
+    enemy.y = 25
+    enemy.x = i * 1
+    #enemy.angle = 270
+    enemy.move_count = 0
+    enemies.append(enemy)
+
+#enemy = Actor('tank_huge')
+#enemy.y = 25
+#enemy.x = 400
+#enemy.move_count = 0
 
 
 def generateGrass():
@@ -53,22 +65,23 @@ def draw():
     for grass1 in grass:
         grass1.draw()
 
-#    if :
-#        screen.draw.text(' Won!', (260,250), color=(255,255,255), fontsize=100)
-#    else:
     for wall in walls:
         wall.draw()
 
     tankBlue.draw()
     tankGreen.draw()
-    enemy.draw()
+    for enemy in enemies:
+        enemy.draw()
 
     for bullet in bullets:
         bullet.draw()
 
+    if not enemies:
+        screen.draw.text(' Won!', (260,250), color=(255,255,255), fontsize=100)
+
 def handleShot(tank, key_shot, bullet_image, index):
     if bullet_holdoff[index] == 0:
-        if key_shot:
+        if key_shot is None or key_shot:
             bullet = Actor(bullet_image)
             if tank.angle + 180 >= 360:
                 bullet.angle = (tank.angle + 180) - 360
@@ -78,7 +91,11 @@ def handleShot(tank, key_shot, bullet_image, index):
             bullet.x = tank.x
             bullet.y = tank.y
             bullets.append(bullet)
-            bullet_holdoff[index]=100
+            if tank.image == 'tank_huge':
+                bullet_holdoff[index]=RECHARGE_ENEMY
+            else:
+                bullet_holdoff[index]=RECHARGE_PLAYER
+
     else:
         bullet_holdoff[index] -= 1
 
@@ -102,7 +119,11 @@ def handleShot(tank, key_shot, bullet_image, index):
 
     index = tank.collidelist(bullets)
     if index != -1 and bullets[index].image != bullet_image:
-        tank.topleft = 0, 10
+        if tank in enemies:
+            enemies.remove(tank)
+        else:
+            tank.topleft = 0, 10
+
         bullets.remove(bullets[index])
 
 
@@ -134,7 +155,7 @@ def handlePazer(tank, key_left, key_right, key_up, key_down, image):
         tank.x = original_x
         tank.y = original_y
 
-def handleEnemy():
+def handleEnemy(enemy):
     choice = random.randint(0, 10)
     if enemy.move_count > 0:
         enemy.move_count = enemy.move_count - 1
@@ -161,7 +182,7 @@ def handleEnemy():
             enemy.move_count = 0
 
     elif choice == 0:
-        print('shoot')
+        print("nope")
     elif choice == 1:
         enemy.angle = random.randint(0, 3) * 90
     else:
@@ -175,6 +196,8 @@ def update():
     handleShot(tankGreen, keyboard.q,  'bullet-green3_outline', 1)
     handlePazer(tankGreen, keyboard.a, keyboard.d, keyboard.w, keyboard.s, 'tank_green')
 
-    handleEnemy()
+    for enemy in enemies:
+        handleShot(enemy, None, 'bullet-dark3_outline', 2)
+        handleEnemy(enemy)
 
 pgzrun.go()
